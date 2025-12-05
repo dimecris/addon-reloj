@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Reloj p5.js (MV3)",
+  "version": "1.0",
+  "description": "Muestra un reloj animado de 300x150 píxeles con p5.js.",
+
+  "permissions": [
+    "storage"
+  ],
+
+  "icons": {
+    "48": "assets/icon.png"
+  },
+
+  "action": {
+    "default_icon": "assets/icon.png",
+    "default_title": "Ver el Reloj",
+    "default_popup": "index.html"
+  },
+
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+}
