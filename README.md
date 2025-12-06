@@ -1,128 +1,147 @@
-# p5 Interaccióm
-# 🕰️ Reloj Gaza — Kris Darias
+import zipfile
 
-**Reloj Gaza** es una pieza visual desarrollada en **p5.js** como parte del aprendizaje de programación creativa en el contexto del grado de Multimedia (UOC, 2025).  
-Combina datos, tiempo y forma para representar el paso de los segundos, minutos y horas mediante tres columnas:  
-- 🕐 **Izquierda:** segundos  
-- ⏱️ **Centro:** minutos (líneas onduladas)  
-- ☀️ **Derecha:** horas y movimiento del “sol”
+readme_content = """# Reloj p5.js (Firefox Add-on, MV3)
 
-La obra toma como referencia conceptual el 2 de noviembre de 1917 —fecha de la Declaración Balfour— y calcula en tiempo real los **días, horas y minutos transcurridos** desde ese momento histórico hasta el presente.  
+## Descripción
 
----
+Este proyecto implementa un reloj animado creado con p5.js (versión 2.x) y empaquetado como un add-on para Firefox bajo Manifest V3.  
+El reloj muestra:
 
-## 💡 Concepto
+- La progresión de minutos mediante líneas onduladas.
+- Un sol que desciende según la hora del día.
+- Un contador del tiempo transcurrido desde una fecha histórica. 
 
-El reloj no busca mostrar la hora de forma práctica, sino **representar visualmente la persistencia del tiempo**.  
-El paso de los segundos se inscribe en una columna lateral, mientras los minutos se dibujan como líneas irregulares, “a mano”, que aluden al gesto humano en la medición del tiempo.  
-El sol de la derecha sube y baja siguiendo las horas del día, “tocando suelo” a las 8h (configurable en `HOURS_GROUND`).
+(Declaración Balfour (2 de noviembre): El gobierno británico emitió una declaración pública prometiendo su apoyo al establecimiento de un hogar nacional para el pueblo judío en Palestina, una región habitada mayoritariamente por árabes.
 
----
+La Declaración Balfour es vista como el origen del conflicto palestino-israelí, un “acto de traición” para muchos árabes que habían colaborado con los británicos.
+)
+- El título y la hora actual.
+- Un modo oscuro persistente, almacenado mediante las funciones de p5.js (storeItem() y getItem()).
 
-## 🧩 Tecnologías utilizadas
+El proyecto demuestra:
 
-- **p5.js** — biblioteca de JavaScript para arte generativo e interacción visual.  
-- **JavaScript (ES6)**  
-- **HTML / CSS** (entorno básico)  
-- **Fuentes locales:** Barlow (Google Fonts)  
-
----
-
-## ⚙️ Estructura del proyecto
-Reloj-Gaza/
-├─ index.html
-├─ sketch.js
-└─ assets/
-└─ Barlow/
-└─ Barlow-Regular.ttf
-
+- Uso de cargas asíncronas en p5.js v2 (sin preload()).
+- Persistencia de datos con p5.storage.
+- Integración en un popup de extensión respetando la CSP de MV3.
+- Un diseño visual propio basado en un lienzo de 300x150 px.
 
 ---
 
-## 🚀 Ejecución
+## Estructura del proyecto
 
-1. Instala la extensión **p5.js Addon** o **Live Server** en Visual Studio Code.  
-2. Abre la carpeta del proyecto.  
-3. Ejecuta `index.html` en el navegador.  
-4. El reloj se ajusta automáticamente al tamaño de la ventana.
+/
+├── manifest.json
+├── index.html
+├── reloj.js
+├── assets/
+│   ├── icon.png
+│   └── Barlow/
+│       ├── Barlow-Bold.ttf
+│       └── Barlow-Medium.ttf (opcional)
+└── p5/
+    ├── p5.min.js
+    └── addons/
+        └── p5.dom.min.js
 
-También puedes abrir directamente el archivo `index.html` con doble clic o usar un servidor local simple (por ejemplo con `python3 -m http.server` en la terminal).
-
----
-
-## ⌨️ Controles de interacción
-
-| Tecla / Acción | Función |
-|----------------|----------|
-| ↑ / ↓ | Cambia la **hora** manualmente |
-| → / ← | Cambia los **minutos** manualmente |
-| 🖱️ Doble clic | Restaura la hora del sistema |
-| 🔄 Redimensionar ventana | Recalcula el layout |
+Nota: p5.sound no se utiliza y no es necesario incluirlo.
 
 ---
 
-## 🧮 Cálculo del tiempo transcurrido 
+## Instalación (modo desarrollo)
 
-La función `drawElapsedSince()` calcula el tiempo desde una fecha base (`1917-11-02T05:30:00`) hasta el momento actual y muestra:
+1. Abrir Firefox y acceder a: about:debugging  
+2. Seleccionar: This Firefox  
+3. Clic en: Load Temporary Add-on…  
+4. Seleccionar manifest.json o cualquier archivo del proyecto  
 
-- Días totales  
-- Horas y minutos restantes  
-- Fecha inicial formateada
-
-Ejemplo del texto generado:
-39 421 DÍAS
-6 HORAS, 15 MINUTOS
-2 NOV 1917
+El reloj aparecerá en el popup de la extensión tras hacer clic en su icono.
 
 ---
 
-## 🎨 Paleta cromática
+## Tecnologías utilizadas
 
-| Color | Uso principal |
-|--------|----------------|
-| `#f7f7f7` | Fondo general |
-| `#111111` | Texto y trazos principales |
-| `#e4312b` | Acento / Sol / Segundo activo |
-| `#149954` | Suelo (zona inferior) |
-| `#b9b7b7` | Gris informativo |
+### p5.js v2.x
+- Uso de async setup() para cargas asíncronas.
+- Carga de fuentes con await loadFont().
+- Eliminación de preload().
 
----
+### p5.storage
+Utilizado para persistir el modo oscuro entre sesiones:
 
-## 🪶 Créditos
+storeItem("modoOscuro", modoOscuro);
+modoOscuro = getItem("modoOscuro") ?? false;
 
-**Autoría:** Kris Darias  
-**Licencia:** [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)  
-**Año:** 2025  
+### WebExtensions Manifest V3 (Firefox)
+El popup se declara mediante:
 
-> *"Anagnórisis: reconocimiento de la identidad por otros."*  
-> — Visualización del paso del tiempo desde una mirada simbólica.
+"action": {
+  "default_popup": "index.html"
+}
 
----
+Y se incluye el permiso requerido por el enunciado académico:
 
-## 🧠 Notas técnicas
+"permissions": ["storage"]
 
-- El sketch usa arrays `Float32Array` para los offsets de las líneas, simulando trazos “a mano”.  
-- `randomSeed(12345)` garantiza que el dibujo sea **reproducible** (sin vibraciones frame a frame).  
-- Todo el sistema de layout (`computeLayout()`) se adapta de forma responsiva al ancho y alto de la ventana.  
-- Para evitar conflictos, se renombró la variable `step` por `gridStep` (ya que `p5.step()` existe internamente).  
-- Funciona en modo 2D (`createCanvas(windowWidth, windowHeight)`), no usa `WEBGL`.
+### CSP estricta
 
----
+"content_security_policy": {
+  "extension_pages": "script-src 'self'; object-src 'self'"
+}
 
-## 📷 Captura de ejemplo
-
-*(Añade aquí una imagen del reloj en ejecución si lo deseas)*  
-Ejemplo:  
-![Reloj Gaza](assets/screenshot.png)
+Esto requiere que todos los scripts (p5.js y el sketch) se carguen desde archivos locales.
 
 ---
 
-## 🧩 Enlaces útiles
+## Persistencia del modo oscuro
 
-- [p5.js — documentación oficial](https://p5js.org/reference/)  
-- [Guía de color y diseño de interfaces p5.js](https://p5js.org/learn/color.html)
+El usuario puede alternar entre modo claro y oscuro mediante un botón circular dibujado directamente en el canvas.  
+La preferencia queda guardada mediante p5.storage y se recupera al volver a abrir el popup.
 
 ---
 
-✨ *Proyecto desarrollado con fines académicos y de experimentación creativa. No se trata de un reloj funcional sino de una metáfora visual del tiempo y la historia.*
+## Funcionalidades del reloj
+
+### Minutos
+Representados mediante 60 líneas onduladas generadas con offsets aleatorios precalculados.
+
+### Segundos
+La línea correspondiente al minuto actual se va completando gradualmente.
+
+### Horas
+Un sol desciende desde el amanecer (06:00) hasta tocar el suelo a las 18:00.
+
+### Tiempo transcurrido desde una fecha
+El sketch muestra un contador en formato:
+
+123 d 4 h 56 m 12 s
+
+### Ajuste manual de hora y minuto
+- Flechas ↑ ↓ permiten ajustar la hora.
+- Flechas ← → permiten ajustar los minutos.
+- Doble clic restaura la hora del sistema.
+
+---
+
+## Detalles técnicos relevantes
+
+### Layout dinámico
+El diseño del reloj se adapta al área del canvas mediante la función computeLayout().
+
+### Recorte del sol con el suelo
+Se utiliza clipping con el contexto 2D:
+
+ctx.clip();
+circle(x, y, d_sol);
+
+
+## Licencia
+
+Creative Commons Attribution 4.0 International (CC BY 4.0)
+
+---
+
+## Autora
+
+Kris Darias  
+Extensión desarrollada con p5.js v2 y Firefox Manifest V3.
 

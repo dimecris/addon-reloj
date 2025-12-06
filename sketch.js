@@ -1,8 +1,11 @@
-// Reloj p5 para el add-on. Mantengo todo en modo global para simplificar.
+// Reloj p5 para el add-on (p5.js v2.x, con cargas asíncronas)
 
+// ------------------------
+// Variables globales
+// ------------------------
 let f_bold;
 
-// Paleta rápida para no repetir hex
+// Paleta rápida
 const P = {
   white: "#ffffff",
   whiteSemi: "#ffffff88",
@@ -30,7 +33,7 @@ const HOURS_GROUND = 18;
 let manualHour = null;
 let manualMinute = null;
 
-// Sol sencillo para el visor
+// Sol
 const d_sol = 20;
 const r_sol = d_sol / 2;
 
@@ -44,6 +47,10 @@ const btnMoon = {
   d: 32
 };
 
+// ------------------------
+// Helpers horas / layout
+// ------------------------
+
 // Convierte una hora del día al desplazamiento vertical (escala 24h sobre 60 líneas)
 function hoursToPixels(h) {
   const hoursFromSix = hourToIndex(h);
@@ -55,20 +62,33 @@ function hourToIndex(h) {
   return (h - 6 + 24) % 24;
 }
 
-function preload() {
-  f_bold = loadFont("assets/Barlow/Barlow-Bold.ttf");
-}
-
-function setup() {
+// ------------------------
+// setup asíncrono (p5 v2)
+// ------------------------
+async function setup() {
   const canvas = createCanvas(300, 150);
   canvas.parent("canvas-container");
 
-  // Recupero el estado del toggle de color
-  modoOscuro = getItem("modoOscuro") ?? false;
-  select("#color-toggle");
+  // Carga asíncrona de la fuente
+  try {
+    f_bold = await loadFont("assets/Barlow/Barlow-Bold.ttf");
+    textFont(f_bold);
+  } catch (err) {
+    console.error("Error cargando la fuente Barlow-Bold:", err);
+    // fallback a la fuente por defecto de p5
+  }
+
+  // Recupero el estado del toggle de color desde localStorage (p5.storage)
+  try {
+    modoOscuro = getItem("modoOscuro");
+  } catch (e) {
+    modoOscuro = null;
+  }
+  if (modoOscuro === null || modoOscuro === undefined) {
+    modoOscuro = false;
+  }
 
   noStroke();
-  textFont(f_bold);
   computeLayout();
 
   // Offsets fijos para las 60 líneas (reproducibles)
@@ -83,14 +103,17 @@ function setup() {
   }
 }
 
+// ------------------------
+// draw
+// ------------------------
 function draw() {
   // Fondo según modo
   if (modoOscuro) {
-    background(20);
-    fill(230);
+    background(P.black);
+    fill(P.white);
   } else {
-    background(240);
-    fill(30);
+    background(P.white);
+    fill(P.black);
   }
 
   // Hora del sistema o la que fijo con el teclado
@@ -101,7 +124,7 @@ function draw() {
   const s = second();
 
   drawFooterBase();
-  drawHorasSun(h, s);
+  drawHorasSun(h);
   drawMinutosLinea(m, s);
   drawHeaderTime(h, m, s);
   drawHeaderTitle("ANAGNÓRISIS", "11 NOV 1917");
@@ -109,6 +132,9 @@ function draw() {
   drawDarkModeButton();
 }
 
+// ------------------------
+// Layout
+// ------------------------
 function computeLayout() {
   margin = 10;
   const containerW = width - margin * 2;
@@ -122,12 +148,15 @@ function computeLayout() {
   baseY = height - margin;
   lineH = bloqueH / 60;
 
-  // Botón modo oscuro: más grande y ligeramente separado del borde
+  // Botón modo oscuro
   btnMoon.d = 36;
   btnMoon.x = width - margin - btnMoon.d * 0.2 - 2;
   btnMoon.y = height - margin - btnMoon.d * 0.4 - 2;
 }
 
+// ------------------------
+// Dibujo de líneas minutos
+// ------------------------
 function drawMinutosLinea(minutoActual, segundoActual) {
   for (let i = 0; i < 60; i++) {
     const y = baseY - i * lineH;
@@ -161,7 +190,9 @@ function drawHandLine(lineIndex, x1, y1, x2, portion) {
   endShape();
 }
 
-// Rectángulo del suelo: lo reutilizo para dibujar y para recortar el sol
+// ------------------------
+// Suelo y sol
+// ------------------------
 function getGroundRect() {
   const sunsetY = baseY - hoursToPixels(HOURS_GROUND) + r_sol;
   const h = height - sunsetY;
@@ -180,7 +211,6 @@ function drawFooterBase() {
   rect(x, y, w, h);
 }
 
-// Sol que cae: usa la escala de horas y se recorta con el suelo
 function drawHorasSun(horaActual) {
   push();
   const idx = hourToIndex(horaActual);
@@ -210,6 +240,9 @@ function drawHorasSun(horaActual) {
   pop();
 }
 
+// ------------------------
+// Cabecera y contador
+// ------------------------
 function drawHeaderTime(h, m, s) {
   push();
   translate(width / 2, height - 25);
@@ -257,7 +290,9 @@ function drawElapsedSince(isoDate) {
   pop();
 }
 
-// Control rápido con flechas para ajustar hora/minuto
+// ------------------------
+// Interacción
+// ------------------------
 function keyPressed() {
   if (keyCode === UP_ARROW) {
     manualHour = (((manualHour ?? hour()) + 1) % 24 + 24) % 24;
@@ -280,21 +315,23 @@ function doubleClicked() {
 
 function cambiarModoColor() {
   modoOscuro = !modoOscuro;
-  storeItem("modoOscuro", modoOscuro);
+  try {
+    storeItem("modoOscuro", modoOscuro);
+  } catch (e) {
+    console.warn("No se pudo guardar modoOscuro:", e);
+  }
   console.log(`Modo oscuro cambiado a: ${modoOscuro}. Guardado en storage.`);
 }
 
 function drawDarkModeButton() {
   push();
-  const bg = modoOscuro ? 30 : 240;
+  const bg = modoOscuro ? P.black : P.white;
   const fg = modoOscuro ? P.white : P.black;
 
-  // fondo del botón sin opacidad para que siempre contraste
   noStroke();
-  fill(bg === 30 ? 240 : 30);
+  fill(bg === P.black ? P.white : P.black);
   circle(btnMoon.x, btnMoon.y, btnMoon.d);
 
-  // icono de luna (creciente)
   noStroke();
   fill(fg);
   const r = btnMoon.d * 0.28;
@@ -307,7 +344,7 @@ function drawDarkModeButton() {
 function mousePressed() {
   const dx = mouseX - btnMoon.x;
   const dy = mouseY - btnMoon.y;
-  
+
   if (dx * dx + dy * dy <= (btnMoon.d * 0.5) ** 2) {
     cambiarModoColor();
   }
