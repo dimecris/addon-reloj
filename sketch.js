@@ -37,6 +37,13 @@ const r_sol = d_sol / 2;
 // Estado de modo oscuro
 let modoOscuro;
 
+// Botón de modo oscuro
+const btnMoon = {
+  x: 0,
+  y: 0,
+  d: 32
+};
+
 // Convierte una hora del día al desplazamiento vertical (escala 24h sobre 60 líneas)
 function hoursToPixels(h) {
   const hoursFromSix = hourToIndex(h);
@@ -99,6 +106,7 @@ function draw() {
   drawHeaderTime(h, m, s);
   drawHeaderTitle("ANAGNÓRISIS", "11 NOV 1917");
   drawElapsedSince("1917-11-02T05:30:25");
+  drawDarkModeButton();
 }
 
 function computeLayout() {
@@ -113,6 +121,11 @@ function computeLayout() {
   const bloqueH = height * 0.7;
   baseY = height - margin;
   lineH = bloqueH / 60;
+
+  // Botón modo oscuro: más grande y ligeramente separado del borde
+  btnMoon.d = 36;
+  btnMoon.x = width - margin - btnMoon.d * 0.2 - 2;
+  btnMoon.y = height - margin - btnMoon.d * 0.4 - 2;
 }
 
 function drawMinutosLinea(minutoActual, segundoActual) {
@@ -209,7 +222,7 @@ function drawHeaderTime(h, m, s) {
 }
 
 function drawHeaderTitle(h1, fechaInicio) {
-  fill(P.black);
+  fill(modoOscuro ? P.white : P.black);
   textAlign(RIGHT, TOP);
   textSize(12);
 
@@ -239,7 +252,7 @@ function drawElapsedSince(isoDate) {
   push();
   textAlign(LEFT, TOP);
   textSize(11);
-  fill(P.green);
+  fill(modoOscuro ? P.white : P.green);
   text(txt, margin, margin);
   pop();
 }
@@ -269,4 +282,33 @@ function cambiarModoColor() {
   modoOscuro = !modoOscuro;
   storeItem("modoOscuro", modoOscuro);
   console.log(`Modo oscuro cambiado a: ${modoOscuro}. Guardado en storage.`);
+}
+
+function drawDarkModeButton() {
+  push();
+  const bg = modoOscuro ? 30 : 240;
+  const fg = modoOscuro ? P.white : P.black;
+
+  // fondo del botón sin opacidad para que siempre contraste
+  noStroke();
+  fill(bg === 30 ? 240 : 30);
+  circle(btnMoon.x, btnMoon.y, btnMoon.d);
+
+  // icono de luna (creciente)
+  noStroke();
+  fill(fg);
+  const r = btnMoon.d * 0.28;
+  circle(btnMoon.x, btnMoon.y, r * 2);
+  fill(bg);
+  circle(btnMoon.x + r * 0.95, btnMoon.y, r * 2.5);
+  pop();
+}
+
+function mousePressed() {
+  const dx = mouseX - btnMoon.x;
+  const dy = mouseY - btnMoon.y;
+  
+  if (dx * dx + dy * dy <= (btnMoon.d * 0.5) ** 2) {
+    cambiarModoColor();
+  }
 }
