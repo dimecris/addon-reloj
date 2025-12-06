@@ -1,408 +1,227 @@
-// Reloj Gaza — boceto base (Kris)
-// Mapping: izq=segundos, centro=minutos (líneas), dcha=horas (y sol)
+// Reloj p5 para el add-on. Mantengo todo en modo global para simplificar.
 
-// --------------------------
-// --- variables globales ---
-// --------------------------
-let f; // fuente
+let f_bold;
+
+// Paleta rápida para no repetir hex
 const P = {
-  bg: "#f7f7f7",
-  grid: "#201e1eff",
   white: "#ffffff",
+  whiteSemi: "#ffffff88",
   black: "#111111",
+  greyDark: "#292929ff",
   red: "#e4312b",
-  green: "#149954",
-  greenlight: "#7fe5b0ff",
-  grey: "#9B9B9B"
+  green: "#149954"
 };
 
-// variables de layout (se calculan en computeLayout)
-let margin, 
-    colLeftX, colRightX,   // columnas izq y dcha
-    bloqueX1, bloqueX2,    // coordenada x inicial y final del bloque de líneas
-    baseY,                 // base del bloque de líneas. Donde empieza la primera línea
-    lineH;                 // distancia vertical entre cada línea
+// Layout y medidas básicas
+let margin,
+  bloqueX1,
+  bloqueX2,
+  baseY,
+  lineH;
 
-// configuración dibujo líneas
-const SEGMENTS = 24;              // cuántos puntos definen cada línea. Más segmentos más ondulación
-let lineOffsets = [];             // array que se llena en setup() con offsets fijos para cada línea
+// Ondulación de las líneas de minutos
+const SEGMENTS = 24;
+let lineOffsets = [];
 
-const HOURS_GROUND = 8;           // hora a la que "toca suelo" el sol
+// Hora a la que el sol toca el suelo
+const HOURS_GROUND = 18;
 
-let manualHour = null;            // Hora editable por scroll. Si es null, usamos la hora del sistema (hour()).
+// Ajuste manual de hora/minuto con teclado
+let manualHour = null;
 let manualMinute = null;
 
-// Modo oscuro
-let modoOscuro; // Variable para guardar el estado del color
+// Sol sencillo para el visor
+const d_sol = 20;
+const r_sol = d_sol / 2;
 
-// --------------------------
-// --- helpers ---
-// --------------------------
+// Estado de modo oscuro
+let modoOscuro;
 
-// Convertir horas a píxeles 
+// Convierte una hora del día al desplazamiento vertical (escala 24h sobre 60 líneas)
 function hoursToPixels(h) {
-  return (h / 24) * (lineH * 60); // convierte horas a px según tu escala actual
+  const hoursFromSix = hourToIndex(h);
+  return map(hoursFromSix, 0, 24, 0, lineH * 60);
 }
 
-// --- helpers para el eje de horas (06 arriba → 05 abajo)
+// Mapea hora real (0-23) a índice con 06:00 en la parte superior
 function hourToIndex(h) {
-  // h = 0..23  → posición 0..23 donde 0 es 06, 23 es 05
   return (h - 6 + 24) % 24;
 }
 
-function labelFromIndex(i) {
-  // i = 0..23  → 06..23,24,01..05 (sin 00: mostramos 24 en su lugar)
-  const v = (6 + i) % 24;           // 0..23, donde 0 equivale a "24"
-  return v === 0 ? "24" : nf(v, 2); // "24" en vez de "00"
-}
-
-// --------------------------
-// --- Ciclo de vida ---
-// --------------------------
-
 function preload() {
-  f = loadFont("assets/Barlow/Barlow-Regular.ttf"); //fuente importada desde google fonts
+  f_bold = loadFont("assets/Barlow/Barlow-Bold.ttf");
 }
 
 function setup() {
-  // Crear el lienzo con el tamaño requerido y asignarlo al contenedor
-  let canvas = createCanvas(300, 150);
-  canvas.parent('canvas-container');
+  const canvas = createCanvas(300, 150);
+  canvas.parent("canvas-container");
 
-  // Recuperar el estado del modo oscuro guardado
-  // Si no hay nada guardado (la primera vez), getItem devuelve null.
-  // Usamos '?? false' para establecerlo en 'false' por defecto.
-  modoOscuro = getItem('modoOscuro') ?? false;
+  // Recupero el estado del toggle de color
+  modoOscuro = getItem("modoOscuro") ?? false;
+  select("#color-toggle");
 
-  // Configurar el botón de la UI
-  let botonColor = select('#color-toggle');
-  botonColor.mousePressed(cambiarModoColor);
-  
-  textFont(f);
-  textAlign(CENTER, CENTER);
   noStroke();
+  textFont(f_bold);
   computeLayout();
 
-  // Precalcular offsets fijos por cada una de las 60 líneas (reproducible)
-  // Usamos una semilla fija para que el dibujo sea siempre igual
-  // Si se generara aleatoriamente cada vez, el dibujo cambia constantemente en cada frame y no se ve bien, vibraría.
-  randomSeed(12345); // semilla fija para reproducibilidad
-  lineOffsets = new Array(60); // array de 60 filas
-  for (let i = 0; i < 60; i++) { 
-    const row = new Float32Array(SEGMENTS + 1); // array de offsets para esta línea. Usamos Float32Array por eficiencia.
-    for (let j = 0; j <= SEGMENTS; j++) { // SEGMENTS+1 puntos por línea
-      row[j] = random(-1.6, 1.6); // offsets entre -1.6 y 1.6 px
+  // Offsets fijos para las 60 líneas (reproducibles)
+  randomSeed(12345);
+  lineOffsets = new Array(60);
+  for (let i = 0; i < 60; i++) {
+    const row = new Float32Array(SEGMENTS + 1);
+    for (let j = 0; j <= SEGMENTS; j++) {
+      row[j] = random(-1.6, 1.6);
     }
-    lineOffsets[i] = row; // asignar la fila al array principal
+    lineOffsets[i] = row;
   }
 }
-
-function windowResized() {
-  resizeCanvas(windowWidth, windowHeight);
-  computeLayout();
-}
-
-
-
-
-// --------------------------
-// --- Dibujo ---
-// --------------------------
 
 function draw() {
-  // Aplicar el color de fondo según el estado
+  // Fondo según modo
   if (modoOscuro) {
-    background(20); // Fondo oscuro
-    fill(230);      // Texto claro
+    background(20);
+    fill(230);
   } else {
-    background(240); // Fondo claro
-    fill(30);       // Texto oscuro
+    background(240);
+    fill(30);
   }
 
-  const s = second();
+  // Hora del sistema o la que fijo con el teclado
   const sysH = hour();
   const sysM = minute();
-  const h = manualHour ?? sysH; // si manualHour es null, usa sysH
+  const h = manualHour ?? sysH;
   const m = manualMinute ?? sysM;
+  const s = second();
 
-
-  drawSecondsColumn(s);
-  drawFooterBase();       // franja verde inferior (suelo)
- 
-    
+  drawFooterBase();
   drawHorasSun(h, s);
   drawMinutosLinea(m, s);
-  drawHorasColumn(h);
-
-  drawHeaderTime(h, m, margin -10, margin * 0.2);   // HH:MM arriba izq
-  drawHeaderTitle('ANAGNÓRISIS','Reconocimiento de \nla identidad por otros', width-margin, margin * 0.1);
-  drawElapsedSince('1917-11-02T05:30:00', '11 NOV 1917'); // Mostrar tiempo transcurrido desde 07/10/2023 (día, horas)
-  drawSignature('CC BY-NC-SA 4.0 - Kris Darias - 2025');     // autoría y título
-  drawInfo();
+  drawHeaderTime(h, m, s);
+  drawHeaderTitle("ANAGNÓRISIS", "11 NOV 1917");
+  drawElapsedSince("1917-11-02T05:30:25");
 }
-
-// --------------------------
-// --- Interacción usuaria: Simulación hora ---
-// --------------------------
-
-function keyPressed() {
-// Atajos rápidos con flechas
-if (keyCode === UP_ARROW) {
-  manualHour = (((manualHour ?? hour()) + 1) % 24 + 24) % 24;// revisa que manualHour no sea null y le suma 1. Si es null usa la hora del sistema. Utiliza ((x % n) + n) % n garantiza siempre un resultado positivo.
-}
-if (keyCode === DOWN_ARROW) {
-  manualHour = (((manualHour ?? hour()) - 1) % 24 + 24) % 24;
-}
-if (keyCode === RIGHT_ARROW) {
-  manualMinute = (((manualMinute ?? minute()) + 1) % 60 + 60) % 60;
-}
-if (keyCode === LEFT_ARROW) {
-  manualMinute = (((manualMinute ?? minute()) - 1) % 60 + 60) % 60;
-}
-
-}
-
-function doubleClicked() { // resetea a hora del sistema
-  manualHour = null;
-  manualMinute = null;
-}
-
-// --------------------------
-// --- Layout ---
-// --------------------------
 
 function computeLayout() {
-  margin = min(width, height) * 0.10;   // margen base relativo
-  const MAX_WIDTH = 1100;                // ancho máximo del contenido
-
-  // Calcula el ancho del contenedor (nunca más de MAX_WIDTH)
-  const containerW = min(width - margin * 2, MAX_WIDTH);
-
-  // Calcula coordenadas del contenedor centrado
+  margin = 10;
+  const containerW = width - margin * 2;
   const containerX1 = (width - containerW) / 2;
   const containerX2 = containerX1 + containerW;
 
-  // Usa el contenedor para las referencias
-  colLeftX  = containerX1 + margin * 0.5;
-  colRightX = containerX2 - margin * 0.5;
+  bloqueX1 = containerX1 + margin * 4;
+  bloqueX2 = containerX2 - margin * 4;
 
-  stackX1 = containerX1 + margin;
-  stackX2 = containerX2 - margin;
-
-  bloqueX1 = containerX1 + margin * 1.8; // coordenada x inicial del bloque de minutos (líneas horizontales)
-  bloqueX2 = containerX2 - margin * 1.8; // coordenada x final del bloque de minutos
-
-  const bloqueH = height * 0.70;  // altura del bloque de minutos y segundos (se ocupan 3/4 partes de la altur de la pantalla)
-  baseY = height * 0.85;       // base del bloque de minutos y segundos
-  lineH = bloqueH / 60;           // 60 líneas máximas
-}
-
-
-
-// --------------------------
-// --- Funciones dibujo ---
-// --------------------------
-
-
-function drawGrid() {
-  stroke(P.grid);
-  strokeWeight(1);
-  const gridStep = 18;
-  for (let y = gridStep/2; y < height; y += gridStep) {    // filas
-    for (let x = gridStep/2; x < width; x += gridStep) {  // columnas
-      point(x, y);
-    }
-  }
-  noStroke();
-}
-
-function drawSecondsColumn(segundoActual) {
-  // Dibujar ticks (marcadores) para cada segundo y números cada 5 segundos
-  textSize(12);
-  strokeWeight(1);
-
-  // Números cada 5 segundos (0,5,10,...,60)
-  for (let i = 0; i <= 60; i += 5) {
-    const y = map(i, 0, 60, baseY, baseY - lineH * 60) + lineH * 0.5;
-    fill(i === segundoActual ? P.red : P.black);
-    text(nf(i, 2), colLeftX - 10, y);
-  }
-
-  // marcador del segundo actual (punto rojo). Mapea 0..59 a la posición y correspondiente
-  const yDot = map(segundoActual, 0, 59, baseY, baseY - lineH * 59); // map(valor, start1, stop1, start2, stop2)
-  fill(P.red);
-  circle(colLeftX +8, yDot, 6);
+  const bloqueH = height * 0.7;
+  baseY = height - margin;
+  lineH = bloqueH / 60;
 }
 
 function drawMinutosLinea(minutoActual, segundoActual) {
-
   for (let i = 0; i < 60; i++) {
     const y = baseY - i * lineH;
 
     if (i < minutoActual) {
-      // líneas completas ya acabadas
-      stroke(P.black); 
+      stroke(P.greyDark);
       strokeWeight(3);
       drawHandLine(i, bloqueX1, y, bloqueX2, 1);
     } else if (i === minutoActual) {
-      // línea del minuto actual: se va completando con los segundos
-      const portion = constrain(segundoActual / 59, 0, 1); // 0..1
-      stroke(P.red); 
-      strokeWeight(2);
+      const portion = constrain(segundoActual / 59, 0, 1);
+      stroke(P.red);
+      strokeWeight(1);
       drawHandLine(i, bloqueX1, y - 2, bloqueX2, portion);
     }
-    // las futuras no se dibujan
   }
   noStroke();
 }
 
-
-// Dibuja una línea “a mano” (ondulada) entre dos puntos x1,y1 y x2,y2. 
-// En vez de trazar una línea recta, crea una serie de vértices interpolados a lo largo del eje X y 
-// aplica un desplazamiento vertical (offset) precomputado para cada punto, de modo que la línea parezca dibujada a mano. 
-// El parámetro portion permite dibujar solo una fracción de la línea (para animar  trazado).
-
 function drawHandLine(lineIndex, x1, y1, x2, portion) {
-  const lastSeg = floor(SEGMENTS * portion); // cuántos segmentos dibujar (0..SEGMENTS)
+  const lastSeg = floor(SEGMENTS * portion);
   noFill();
+
+  strokeWeight(0.8);
   beginShape();
   for (let k = 0; k <= lastSeg; k++) {
-    const t = k / SEGMENTS; // t va de 0 a 1. Indica la posición relativa en la línea (0=inicio, 1=final)
-    const x = lerp(x1, x2, t); // Interpola la coordenada X entre x1 y x2. El metodo lerp(a,b,t) devuelve un valor entre a y b según t (0 ≤ t ≤ 1)
-    const oy = lineOffsets[lineIndex][k]; // obtenemos el offset vertical precomputado en SETUP para este punto (para crear el efecto a mano)
-    vertex(x, y1 + oy); // dibuja el vértice en la posición con offset
+    const t = k / SEGMENTS;
+    const x = lerp(x1, x2, t);
+    const oy = lineOffsets[lineIndex][k];
+    vertex(x, y1 + oy);
   }
   endShape();
 }
 
-
-function drawHorasColumn(horaActual) {
-  textSize(16);
-  for (let i = 0; i < 24; i++) {
-    // i = 0..23 (06 arriba → 05 abajo)
-    const y = map(i, 0, 23, baseY - lineH * 60, baseY);
-    const label = labelFromIndex(i);
-    const isCurrent = (i === hourToIndex(horaActual));
-    fill(isCurrent ? P.red : P.black);
-    text(label, colRightX, y);
-  }
-}
-
-
-function drawHorasSun(horaActual) {
-  // Calcular posición y tamaño del sol
-  const idx = hourToIndex(horaActual);
-  const y   = map(idx, 0, 23, baseY - lineH * 60, baseY);
-  const x   = (bloqueX1 + bloqueX2) * 0.42;
-  const d   = min(width, height) * 0.12;
-
-  noStroke();
-  fill(P.red);
-  circle(x, y, d);
-
-  // --- ahora detectar intersección con el rectángulo del suelo y pintar
-  // la porción dentro del suelo en blanco usando clipping del canvas ---
-  // reproducir exactamente la geometría de drawFooterBase()
-  const topY = baseY + 2; // mismo offset usado en drawFooterBase
-  const desiredH = hoursToPixels(HOURS_GROUND);
-  const h = min(desiredH, height + topY);
+// Rectángulo del suelo: lo reutilizo para dibujar y para recortar el sol
+function getGroundRect() {
+  const sunsetY = baseY - hoursToPixels(HOURS_GROUND) + r_sol;
+  const h = height - sunsetY;
   const stackW = bloqueX2 - bloqueX1;
-  const w = stackW / 1.10; // 10% más ancho
-  const cx = (bloqueX1 + bloqueX2) / 2; // centro x del bloque de líneas
-  const rectX  = cx - w / 2;
-  const rectTop = topY - h;    // y superior del rectángulo del suelo
-  const rectH = h + 100;             // altura positiva (desde rectTop hacia abajo) + se añade 100 para cubrir el espacio extra del suelo
+  const w = stackW / 1.1;
+  const cx = (bloqueX1 + bloqueX2) / 2;
+  const x = cx - w / 2;
 
-  const r = d / 2;
-  // Comprobar si el círculo intersecta verticalmente el rectángulo del suelo
-  if ((y + r) > rectTop && (y - r ) < topY) {
-    const ctx = drawingContext; // 2D canvas context
-    ctx.save();
-    ctx.beginPath();
-    // definir clip exactamente en el área del suelo
-    ctx.rect(rectX, rectTop, w, rectH);
-    ctx.clip();
-
-    // Dibujar sólo la parte del sol dentro del clip en blanco
-    noStroke();
-    fill(P.white); // color del suelo
-    circle(x, y, d);
-
-    ctx.restore();
-  }
+  return { x, y: sunsetY, w, h };
 }
 
 function drawFooterBase() {
-  // Top del suelo: justo debajo de la primera línea + 100
-  const topY = baseY + 100;
-
-  // Altura basada en horas
-  const desiredH = hoursToPixels(HOURS_GROUND);
-  const h = min(desiredH, height); // por si no cabe
-
-  // Ancho: un poco menos que el bloque de líneas
-  const stackW = bloqueX2 - bloqueX1;
-  const w = stackW / 1.10; // 10% más ancho
-  const cx = (bloqueX1 + bloqueX2) / 2;
-  const x  = cx - w / 2;
-
+  const { x, y, w, h } = getGroundRect();
   noStroke();
   fill(P.green);
-  rect(x, topY, w, -h-100);
+  rect(x, y, w, h);
 }
 
-function drawHeaderTime(h, m, x, y) {
-  fill(P.black);
-  textAlign(LEFT, TOP);
-  textSize(35);
-  text(nf(h, 2) + ":" + nf(m, 2), x, y);
-}
-
-function drawHeaderTitle(h1,h2,x,y) {
-  fill(P.black);
-  textAlign(RIGHT, TOP);
-  textSize(30);
-  text(h1.toLocaleUpperCase(), x,y);
-  textSize(14);
-  text(h2.toLocaleUpperCase(), x,y+35);
-}
-
-function drawInfo() {
-  textAlign(LEFT, BOTTOM);
-  fill(P.grey);
-  textSize(14);
-  const txt = 'H. (RIGHT-LEFT)  \nMIN. (UP-DOWN)\ndoble click = H. sist.';
-  text(txt.toLocaleUpperCase(), margin, height - margin * 0.4);
-}
-
-function drawSignature(txt) {
+// Sol que cae: usa la escala de horas y se recorta con el suelo
+function drawHorasSun(horaActual) {
   push();
-  textAlign(LEFT, TOP); // alineado a la derecha del punto de referencia
-  textSize(14);
+  const idx = hourToIndex(horaActual);
+  const y = map(idx, 0, 23, baseY - lineH * 60, baseY);
+  const x = (bloqueX1 + bloqueX2) * 0.5;
+
   noStroke();
-  fill(P.grey);
+  fill(P.red);
+  circle(x, y, d_sol);
 
-  const padX = margin * 0.35;  // separación del borde derecho
-  const padY = margin * 0.4;  // separación del borde inferior
+  const { x: gx, y: gy, w: gw, h: gh } = getGroundRect();
 
-  // Mueve el origen al borde inferior derecho
-  translate(padX, height - padY);
+  if (y + r_sol > gy && y - r_sol < gy + gh) {
+    const ctx = drawingContext;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(gx, gy, gw, gh);
+    ctx.clip();
 
-  // Rota -90° para que quede vertical (leyéndose de abajo a arriba)
-  rotate(-HALF_PI);
+    noStroke();
+    fill(P.whiteSemi);
+    circle(x, y, d_sol);
 
-  // Dibuja el texto en esa posición
-  text(txt.toUpperCase(), 0, 0);
+    ctx.restore();
+  }
 
   pop();
 }
 
-// Dibuja en pantalla el tiempo transcurrido desde una fecha ISO (YYYY-MM-DDTHH:MM:SS)
-function drawElapsedSince(isoDate, fechaInicio) {
+function drawHeaderTime(h, m, s) {
+  push();
+  translate(width / 2, height - 25);
+
+  fill(P.white);
+  textAlign(CENTER, CENTER);
+  textSize(22);
+  text(nf(h, 2) + ":" + nf(m, 2) + ":" + nf(s, 2), 0, 0);
+  pop();
+}
+
+function drawHeaderTitle(h1, fechaInicio) {
+  fill(P.black);
+  textAlign(RIGHT, TOP);
+  textSize(12);
+
+  const txt = h1.toLocaleUpperCase() + "\n desde " + `${fechaInicio}`;
+  text(txt, width - margin, margin);
+}
+
+function drawElapsedSince(isoDate) {
   const since = new Date(isoDate);
   const now = new Date();
-  let deltaMs = now - since; // milisegundos
-  if (isNaN(deltaMs)) return; // fecha inválida
+  let deltaMs = now - since;
+  if (isNaN(deltaMs)) return;
 
   const msPerHour = 1000 * 60 * 60;
   const msPerDay = msPerHour * 24;
@@ -412,78 +231,42 @@ function drawElapsedSince(isoDate, fechaInicio) {
   const hours = Math.floor(deltaMs / msPerHour);
   deltaMs -= hours * msPerHour;
   const minutes = Math.floor(deltaMs / (1000 * 60));
+  deltaMs -= minutes * (1000 * 60);
+  const seconds = Math.floor(deltaMs / 1000);
 
-  const txt = `${days} días \n${hours} horas, ${minutes} minutos \n ${fechaInicio}`;
+  const txt = `${days} d ${hours} h ${minutes} m ${seconds} s`;
 
   push();
-  textAlign(RIGHT, BOTTOM);
-  textSize(14);
-  fill(P.black);
-  text(txt.toUpperCase(), width-margin,height - margin * 0.4 );
+  textAlign(LEFT, TOP);
+  textSize(11);
+  fill(P.green);
+  text(txt, margin, margin);
   pop();
 }
 
-// Función que se llama al presionar el botón
-function cambiarModoColor() {
-  // Invertir el estado actual
-  modoOscuro = !modoOscuro;
-  
-  // Guardar el nuevo estado en el almacenamiento local de la extensión
-  storeItem('modoOscuro', modoOscuro);
-  
-  console.log(`Modo oscuro cambiado a: ${modoOscuro}. Guardado en storage.`);
+// Control rápido con flechas para ajustar hora/minuto
+function keyPressed() {
+  if (keyCode === UP_ARROW) {
+    manualHour = (((manualHour ?? hour()) + 1) % 24 + 24) % 24;
+  }
+  if (keyCode === DOWN_ARROW) {
+    manualHour = (((manualHour ?? hour()) - 1) % 24 + 24) % 24;
+  }
+  if (keyCode === RIGHT_ARROW) {
+    manualMinute = (((manualMinute ?? minute()) + 1) % 60 + 60) % 60;
+  }
+  if (keyCode === LEFT_ARROW) {
+    manualMinute = (((manualMinute ?? minute()) - 1) % 60 + 60) % 60;
+  }
 }
 
-// -------------------------------------
-// --- Nueva estructura con instancia p5 ---
-// -------------------------------------
+function doubleClicked() {
+  manualHour = null;
+  manualMinute = null;
+}
 
-const sketch = (p) => {
-  let modoOscuro;
-
-  // setup ahora es una propiedad de nuestro sketch
-  p.setup = () => {
-    let canvas = p.createCanvas(300, 150);
-    canvas.parent('canvas-container');
-
-    // Las funciones de p5.js ahora se llaman con p.
-    modoOscuro = p.getItem('modoOscuro') ?? false;
-
-    let botonColor = p.select('#color-toggle');
-    botonColor.mousePressed(cambiarModoColor);
-    
-    p.textAlign(p.CENTER, p.CENTER);
-    p.textSize(48);
-    p.textFont('monospace');
-  };
-
-  // draw también es una propiedad
-  p.draw = () => {
-    if (modoOscuro) {
-      p.background(20);
-      p.fill(230);
-    } else {
-      p.background(240);
-      p.fill(30);
-    }
-
-    // Las funciones de p5.js ahora se llaman con p.
-    let h = p.nf(p.hour(), 2);
-    let m = p.nf(p.minute(), 2);
-    let s = p.nf(p.second(), 2);
-
-    p.text(`${h}:${m}:${s}`, p.width / 2, p.height / 2);
-  };
-
-  // Esta función auxiliar no necesita el prefijo 'p' porque no usa
-  // ninguna función del núcleo de p5.js directamente.
-  function cambiarModoColor() {
-    modoOscuro = !modoOscuro;
-    p.storeItem('modoOscuro', modoOscuro);
-    console.log(`Modo oscuro cambiado a: ${modoOscuro}. Guardado en storage.`);
-  }
-};
-
-// Esta línea es clave: crea una nueva instancia de p5
-// y le pasa nuestra función 'sketch' para que la ejecute.
-let miP5 = new p5(sketch);
+function cambiarModoColor() {
+  modoOscuro = !modoOscuro;
+  storeItem("modoOscuro", modoOscuro);
+  console.log(`Modo oscuro cambiado a: ${modoOscuro}. Guardado en storage.`);
+}
