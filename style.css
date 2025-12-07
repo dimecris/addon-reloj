@@ -43,14 +43,15 @@ b{
   gap: 5px;
 }
 
-#info-button {
-  width: 20px;
-  height: 20px;
+#info-button,
+#time-button  {
+  width: 18px;
+  height: 18px;
   border: none;
   border-radius: 50%;
   background-color:var(--color-grey-light);
   cursor: pointer;
-  font-size: 11px;
+  font-size: 10px;
   transition: all 0.3s ease;
 }
 
@@ -107,8 +108,8 @@ b{
 }
 
 #time-button {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border: none;
   border-radius: 50%;
   background-color: var(--color-white);
@@ -119,6 +120,7 @@ b{
 }
 #time-button .icon-reloj {
   display: block;
+  width: 18px;
 }
 
 #time-button:hover {

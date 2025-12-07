@@ -3,15 +3,15 @@
 // ------------------------
 // Variables globales
 // ------------------------
-let f_bold;
+let f, f_bold;
 
-// En sketch.js, después de que el DOM esté listo
+// Recupero colores desde las variables CSS del :root
 function getColorFromCSS(varName) {
   return getComputedStyle(document.documentElement)
     .getPropertyValue(varName).trim();
 }
 
-// Luego puedes usarlas:
+// Paleta de colores del proyecto
 const P = {
   white: getColorFromCSS('--color-white'),
   whiteSemi: getColorFromCSS('--color-white'),
@@ -21,32 +21,32 @@ const P = {
   green: getColorFromCSS('--color-green')
 };
 
-// Layout y medidas básicas
+// Variables para el layout principal
 let margin,
   bloqueX1,
   bloqueX2,
   baseY,
   lineH;
 
-// Ondulación de las líneas de minutos
+// Número de segmentos por línea (para la ondulación)
 const SEGMENTS = 24;
 let lineOffsets = [];
 
-// Hora a la que el sol toca el suelo
+// A qué hora el sol toca el suelo (18:00 = 6 PM)
 const HOURS_GROUND = 18;
 
-// Ajuste manual de hora/minuto con teclado
+// Hora manual (null = usar hora del sistema)
 let manualHour = null;
 let manualMinute = null;
 
-// Sol
+// Dimensiones del sol
 const d_sol = 20;
 const r_sol = d_sol / 2;
 
-// Estado de modo oscuro
+// Modo oscuro (guardo en localStorage con p5.storage)
 let modoOscuro;
 
-// Botón de modo oscuro
+// Propiedades del botón de modo oscuro
 const btnMoon = {
   x: 0,
   y: 0,
@@ -54,37 +54,38 @@ const btnMoon = {
 };
 
 // ------------------------
-// Helpers horas / layout
+// Funciones auxiliares
 // ------------------------
 
-// Convierte una hora del día al desplazamiento vertical (escala 24h sobre 60 líneas)
+// Convierte horas del día a píxeles verticales (escala de 24h sobre 60 líneas)
 function hoursToPixels(h) {
   const hoursFromSix = hourToIndex(h);
   return map(hoursFromSix, 0, 24, 0, lineH * 60);
 }
 
-// Mapea hora real (0-23) a índice con 06:00 en la parte superior
+// Mapeo de hora real (0-23) a índice con 06:00 arriba
 function hourToIndex(h) {
   return (h - 6 + 24) % 24;
 }
 
 // ------------------------
-// setup asíncrono (p5 v2)
+// setup (asíncrono en p5)
 // ------------------------
 async function setup() {
   const canvas = createCanvas(300, 150);
   canvas.parent("canvas-container");
 
-  // Carga asíncrona de la fuente
+  // Cargo la fuente custom de forma asíncrona
   try {
+    f = await loadFont("assets/Barlow/Barlow-Regular.ttf");
+    textFont(f);
     f_bold = await loadFont("assets/Barlow/Barlow-Bold.ttf");
     textFont(f_bold);
   } catch (err) {
-    console.error("Error cargando la fuente Barlow-Bold:", err);
-    // fallback a la fuente por defecto de p5
+    console.error("Error cargando Barlow-Bold:", err);
   }
 
-  // Recupero el estado del toggle de color desde localStorage (p5.storage)
+  // Leo el estado del modo oscuro desde localStorage
   try {
     modoOscuro = getItem("modoOscuro");
   } catch (e) {
@@ -97,7 +98,7 @@ async function setup() {
   noStroke();
   computeLayout();
 
-  // Offsets fijos para las 60 líneas (reproducibles)
+  // Genero offsets aleatorios fijos para las 60 líneas
   randomSeed(12345);
   lineOffsets = new Array(60);
   for (let i = 0; i < 60; i++) {
@@ -110,10 +111,10 @@ async function setup() {
 }
 
 // ------------------------
-// draw
+// draw (bucle principal)
 // ------------------------
 function draw() {
-  // Fondo según modo
+  // Cambio el fondo según el modo
   if (modoOscuro) {
     background(P.black);
     fill(P.white);
@@ -122,13 +123,14 @@ function draw() {
     fill(P.black);
   }
 
-  // Hora del sistema o la que fijo con el teclado
+  // Obtengo la hora actual o la manual si está definida
   const sysH = hour();
   const sysM = minute();
   const h = manualHour ?? sysH;
   const m = manualMinute ?? sysM;
   const s = second();
 
+  // Dibujo todos los elementos del reloj
   drawFooterBase();
   drawHorasSun(h);
   drawMinutosLinea(m, s);
@@ -139,7 +141,7 @@ function draw() {
 }
 
 // ------------------------
-// Layout
+// Cálculo del layout
 // ------------------------
 function computeLayout() {
   margin = 10;
@@ -154,24 +156,27 @@ function computeLayout() {
   baseY = height - margin;
   lineH = bloqueH / 60;
 
-  // Botón modo oscuro
+  // Posiciono el botón de modo oscuro
   btnMoon.d = 36;
   btnMoon.x = width - margin - btnMoon.d * 0.2 - 2;
   btnMoon.y = height - margin - btnMoon.d * 0.4 - 2;
 }
 
 // ------------------------
-// Dibujo de líneas minutos
+// Líneas de minutos
 // ------------------------
 function drawMinutosLinea(minutoActual, segundoActual) {
   for (let i = 0; i < 60; i++) {
     const y = baseY - i * lineH;
 
+    // Minutos completados
     if (i < minutoActual) {
       stroke(P.greyDark);
       strokeWeight(3);
       drawHandLine(i, bloqueX1, y, bloqueX2, 1);
-    } else if (i === minutoActual) {
+    } 
+    // Minuto actual progresando
+    else if (i === minutoActual) {
       const portion = constrain(segundoActual / 59, 0, 1);
       stroke(P.red);
       strokeWeight(1);
@@ -181,6 +186,7 @@ function drawMinutosLinea(minutoActual, segundoActual) {
   noStroke();
 }
 
+// Dibujo de una línea ondulada con progreso parcial
 function drawHandLine(lineIndex, x1, y1, x2, portion) {
   const lastSeg = floor(SEGMENTS * portion);
   noFill();
@@ -199,6 +205,8 @@ function drawHandLine(lineIndex, x1, y1, x2, portion) {
 // ------------------------
 // Suelo y sol
 // ------------------------
+
+// Calcula el rectángulo del suelo (verde)
 function getGroundRect() {
   const sunsetY = baseY - hoursToPixels(HOURS_GROUND) + r_sol;
   const h = height - sunsetY;
@@ -210,6 +218,7 @@ function getGroundRect() {
   return { x, y: sunsetY, w, h };
 }
 
+// Dibuja el rectángulo del suelo
 function drawFooterBase() {
   const { x, y, w, h } = getGroundRect();
   noStroke();
@@ -217,18 +226,21 @@ function drawFooterBase() {
   rect(x, y, w, h);
 }
 
+// Dibuja el sol descendiendo según la hora
 function drawHorasSun(horaActual) {
   push();
   const idx = hourToIndex(horaActual);
   const y = map(idx, 0, 23, baseY - lineH * 60, baseY);
   const x = (bloqueX1 + bloqueX2) * 0.5;
 
+  // Sol rojo completo
   noStroke();
   fill(P.red);
   circle(x, y, d_sol);
 
   const { x: gx, y: gy, w: gw, h: gh } = getGroundRect();
 
+  // Si el sol toca el suelo, recorto la parte inferior con clip
   if (y + r_sol > gy && y - r_sol < gy + gh) {
     const ctx = drawingContext;
     ctx.save();
@@ -249,30 +261,36 @@ function drawHorasSun(horaActual) {
 // ------------------------
 // Cabecera y contador
 // ------------------------
+
+// Muestra la hora digital en el centro inferior
 function drawHeaderTime(h, m, s) {
   push();
   translate(width / 2, height - 25);
 
   fill(P.white);
   textAlign(CENTER, CENTER);
+  textFont(f_bold);
   textSize(22);
   text(nf(h, 2) + ":" + nf(m, 2) + ":" + nf(s, 2), 0, 0);
   pop();
 }
 
+// Título principal arriba a la derecha
 function drawHeaderTitle(h1, fechaInicio) {
   fill(modoOscuro ? P.white : P.black);
   textAlign(RIGHT, TOP);
+  textFont(f);
   textSize(12);
 
   const txt = h1.toLocaleUpperCase() + "\n desde " + `${fechaInicio}`;
   text(txt, width - margin, margin);
 }
 
+// Contador del tiempo transcurrido desde una fecha
 function drawElapsedSince(isoDate, currentH, currentM, currentS) {
   const since = new Date(isoDate);
   
-  // Usar hora manual o del sistema
+  // Creo la fecha "actual" usando la hora manual o del sistema
   const now = new Date();
   now.setHours(currentH);
   now.setMinutes(currentM);
@@ -284,6 +302,7 @@ function drawElapsedSince(isoDate, currentH, currentM, currentS) {
   const msPerHour = 1000 * 60 * 60;
   const msPerDay = msPerHour * 24;
 
+  // Calculo días, horas, minutos y segundos
   const days = Math.floor(deltaMs / msPerDay);
   deltaMs -= days * msPerDay;
   const hours = Math.floor(deltaMs / msPerHour);
@@ -302,29 +321,7 @@ function drawElapsedSince(isoDate, currentH, currentM, currentS) {
   pop();
 }
 
-// ------------------------
-// Interacción
-// ------------------------
-function keyPressed() {
-  if (keyCode === UP_ARROW) {
-    manualHour = (((manualHour ?? hour()) + 1) % 24 + 24) % 24;
-  }
-  if (keyCode === DOWN_ARROW) {
-    manualHour = (((manualHour ?? hour()) - 1) % 24 + 24) % 24;
-  }
-  if (keyCode === RIGHT_ARROW) {
-    manualMinute = (((manualMinute ?? minute()) + 1) % 60 + 60) % 60;
-  }
-  if (keyCode === LEFT_ARROW) {
-    manualMinute = (((manualMinute ?? minute()) - 1) % 60 + 60) % 60;
-  }
-}
-
-function doubleClicked() {
-  manualHour = null;
-  manualMinute = null;
-}
-
+// Alternar modo oscuro y guardar la preferencia
 function cambiarModoColor() {
   modoOscuro = !modoOscuro;
   try {
@@ -332,18 +329,21 @@ function cambiarModoColor() {
   } catch (e) {
     console.warn("No se pudo guardar modoOscuro:", e);
   }
-  console.log(`Modo oscuro cambiado a: ${modoOscuro}. Guardado en storage.`);
+  console.log(`Modo oscuro: ${modoOscuro}`);
 }
 
+// Dibujo del botón de modo oscuro (luna)
 function drawDarkModeButton() {
   push();
   const bg = modoOscuro ? P.black : P.white;
   const fg = modoOscuro ? P.white : P.black;
 
+  // Círculo de fondo del botón
   noStroke();
   fill(bg === P.black ? P.white : P.black);
   circle(btnMoon.x, btnMoon.y, btnMoon.d);
 
+  // Luna (círculo con mordida)
   noStroke();
   fill(fg);
   const r = btnMoon.d * 0.28;
@@ -353,6 +353,7 @@ function drawDarkModeButton() {
   pop();
 }
 
+// Detecto clic sobre el botón de modo oscuro
 function mousePressed() {
   const dx = mouseX - btnMoon.x;
   const dy = mouseY - btnMoon.y;
@@ -361,6 +362,10 @@ function mousePressed() {
     cambiarModoColor();
   }
 }
+
+// ------------------------
+// Setup del modal de info
+// ------------------------
 function modalSetup() {
   const modal = document.getElementById("info-modal");
   const infoButton = document.getElementById("info-button");
@@ -374,6 +379,7 @@ function modalSetup() {
     modal.style.display = "none";
   };
 
+  // Cierra el modal si hago clic fuera
   window.onclick = function(event) {
     if (event.target == modal) {
       modal.style.display = "none";
@@ -381,6 +387,9 @@ function modalSetup() {
   };
 }
 
+// ------------------------
+// Setup del slider de hora
+// ------------------------
 function timeSliderSetup() {
   const timeButton = document.getElementById('time-button');
   const container = document.getElementById('time-slider-container');
@@ -392,22 +401,26 @@ function timeSliderSetup() {
 
   if (!timeButton || !container || !hourSlider || !minuteSlider) return;
 
+  // Muestro/oculto el slider al hacer clic en el botón
   timeButton.addEventListener('click', function() {
     container.style.display = container.style.display === 'none' ? 'block' : 'none';
   });
 
+  // Slider de horas
   hourSlider.addEventListener('input', function(e) {
     const hour = parseInt(e.target.value);
     hourDisplay.textContent = hour.toString().padStart(2, '0');
     manualHour = hour;
   });
 
+  // Slider de minutos
   minuteSlider.addEventListener('input', function(e) {
     const minute = parseInt(e.target.value);
     minuteDisplay.textContent = minute.toString().padStart(2, '0');
     manualMinute = minute;
   });
 
+  // Botón reset vuelve a la hora del sistema
   resetButton.addEventListener('click', function() {
     manualHour = null;
     manualMinute = null;
@@ -418,6 +431,7 @@ function timeSliderSetup() {
   });
 }
 
+// Inicializo todo cuando el DOM esté listo
 window.addEventListener('load', () => {
   modalSetup();
   timeSliderSetup();
