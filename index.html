@@ -15,9 +15,49 @@
       <!-- Contenedor para el lienzo de p5.js -->
       <div id="canvas-container"></div>
       
-      <!-- Controles de la UI 
+      <!-- Controles de la UI -->
       <div class="controles">
-        <button id="color-toggle">Cambiar Fondo</button>
+        <div id="time-control">
+          <button id="time-button">
+            <span class="icon-reloj">
+              <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
+                <!-- Círculo exterior -->
+                <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                <!-- Aguja horas -->
+                <line x1="12" y1="12" x2="12" y2="7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                <!-- Aguja minutos -->
+                <line x1="12" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linecap="round"/>
+              </svg>
+            </span>
+          </button>
+          <div id="time-slider-container" style="display: none;">
+            <div class="time-slider-content" >
+            <div class="slider-row">
+              <label>H:</label>
+              <input type="range" id="hour-slider" min="0" max="23" value="12">
+              <span id="hour-display">12</span>
+            </div>
+            <div class="slider-row">
+              <label>M:</label>
+              <input type="range" id="minute-slider" min="0" max="59" value="0">
+              <span id="minute-display">00</span>
+            </div>
+            <button id="reset-time">↻</button>
+            </div>
+          </div>
+        </div>
+        <button id="info-button">?</button>
+      </div>
+      <div id="info-modal" class="modal">
+        <div class="modal-content">
+          <span class="close-button">&times;</span>
+          <h2>Reloj Anagnórisis</h2>
+          <p>Representa el tiempo que el pueblo Palestino sigue esperando hasta hoy.</p>
+          <p> def: Reconocimiento de la identidad por otro u otros.</p>
+          <p><b>La Declaración Balfour (1917)</b> apoyó un “hogar nacional judío” en Palestina sin reconocer al pueblo palestino, pese a que era la mayoría. Los mencionó solo como “comunidades no judías”, una fórmula que los invisibilizó y que permitió a una potencia colonial decidir sobre su tierra sin consultarlos, creando una base profundamente injusta.</p>
+
+<p><b>Balfour es el origen del conflicto </b>porque reconoció a un pueblo y relegó al otro.</p>
+        </div>
       </div>
     </main>
 

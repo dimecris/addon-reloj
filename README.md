@@ -1,6 +1,5 @@
-import zipfile
 
-readme_content = """# Reloj p5.js (Firefox Add-on, MV3)
+# Reloj p5.js (Firefox Add-on, MV3)
 
 ## Descripción
 
@@ -11,10 +10,9 @@ El reloj muestra:
 - Un sol que desciende según la hora del día.
 - Un contador del tiempo transcurrido desde una fecha histórica. 
 
-(Declaración Balfour (2 de noviembre): El gobierno británico emitió una declaración pública prometiendo su apoyo al establecimiento de un hogar nacional para el pueblo judío en Palestina, una región habitada mayoritariamente por árabes.
-
-La Declaración Balfour es vista como el origen del conflicto palestino-israelí, un “acto de traición” para muchos árabes que habían colaborado con los británicos.
-)
+> (La Declaración Balfour (1917) apoyó la creación de un “hogar nacional judío” en Palestina sin reconocer al pueblo palestino, que era la gran mayoría de la población. En el texto, los palestinos aparecen descritos únicamente como “las comunidades no judías”, una expresión que los reduce a un bloque anónimo y les niega identidad política. Esta invisibilización fue profundamente injusta: una potencia colonial decidió el futuro de su tierra sin consultarlos y sin admitir que también tenían derechos nacionales.
+> 
+> Cuando la Declaración se convirtió en política oficial del Mandato Británico, esa desigualdad inicial se volvió estructural: se impulsaron instituciones judías y una inmigración creciente mientras se limitaban las aspiraciones políticas palestinas. El resultado fue un desequilibrio que alimentó tensiones, violencia y, finalmente, el escenario que llevó a la partición de 1947 y la Nakba de 1948. Para muchos, Balfour marca el inicio de un siglo de conflicto porque estableció, desde el principio, que un pueblo sería reconocido y el otro quedaría relegado.)
 - El título y la hora actual.
 - Un modo oscuro persistente, almacenado mediante las funciones de p5.js (storeItem() y getItem()).
 
@@ -43,7 +41,6 @@ El proyecto demuestra:
     └── addons/
         └── p5.dom.min.js
 
-Nota: p5.sound no se utiliza y no es necesario incluirlo.
 
 ---
 
@@ -63,7 +60,6 @@ El reloj aparecerá en el popup de la extensión tras hacer clic en su icono.
 ### p5.js v2.x
 - Uso de async setup() para cargas asíncronas.
 - Carga de fuentes con await loadFont().
-- Eliminación de preload().
 
 ### p5.storage
 Utilizado para persistir el modo oscuro entre sesiones:
@@ -78,7 +74,7 @@ El popup se declara mediante:
   "default_popup": "index.html"
 }
 
-Y se incluye el permiso requerido por el enunciado académico:
+Y se incluye el permiso:
 
 "permissions": ["storage"]
 
@@ -115,23 +111,14 @@ El sketch muestra un contador en formato:
 
 123 d 4 h 56 m 12 s
 
-### Ajuste manual de hora y minuto
-- Flechas ↑ ↓ permiten ajustar la hora.
-- Flechas ← → permiten ajustar los minutos.
-- Doble clic restaura la hora del sistema.
+### Ajuste manual de hora y minuto con un slider
+- Slider 1 modifica las horas
+- Slider 2 modifica los minutos
+
+### Modal informativo
+Un botón "i" abre un modal con información contextual sobre la Declaración Balfour y su relevancia histórica.
 
 ---
-
-## Detalles técnicos relevantes
-
-### Layout dinámico
-El diseño del reloj se adapta al área del canvas mediante la función computeLayout().
-
-### Recorte del sol con el suelo
-Se utiliza clipping con el contexto 2D:
-
-ctx.clip();
-circle(x, y, d_sol);
 
 
 ## Licencia

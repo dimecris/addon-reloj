@@ -5,14 +5,20 @@
 // ------------------------
 let f_bold;
 
-// Paleta rápida
+// En sketch.js, después de que el DOM esté listo
+function getColorFromCSS(varName) {
+  return getComputedStyle(document.documentElement)
+    .getPropertyValue(varName).trim();
+}
+
+// Luego puedes usarlas:
 const P = {
-  white: "#ffffff",
-  whiteSemi: "#ffffff88",
-  black: "#111111",
-  greyDark: "#292929ff",
-  red: "#e4312b",
-  green: "#149954"
+  white: getColorFromCSS('--color-white'),
+  whiteSemi: getColorFromCSS('--color-white'),
+  black: getColorFromCSS('--color-black'),
+  greyDark: getColorFromCSS('--color-grey-dark'),
+  red: getColorFromCSS('--color-red'),
+  green: getColorFromCSS('--color-green')
 };
 
 // Layout y medidas básicas
@@ -127,8 +133,8 @@ function draw() {
   drawHorasSun(h);
   drawMinutosLinea(m, s);
   drawHeaderTime(h, m, s);
-  drawHeaderTitle("ANAGNÓRISIS", "11 NOV 1917");
-  drawElapsedSince("1917-11-02T05:30:25");
+  drawHeaderTitle("ANAGNÓRISIS", "2 NOV 1917");
+  drawElapsedSince("1917-11-02T05:30:25", h, m, s);
   drawDarkModeButton();
 }
 
@@ -263,9 +269,15 @@ function drawHeaderTitle(h1, fechaInicio) {
   text(txt, width - margin, margin);
 }
 
-function drawElapsedSince(isoDate) {
+function drawElapsedSince(isoDate, currentH, currentM, currentS) {
   const since = new Date(isoDate);
+  
+  // Usar hora manual o del sistema
   const now = new Date();
+  now.setHours(currentH);
+  now.setMinutes(currentM);
+  now.setSeconds(currentS);
+  
   let deltaMs = now - since;
   if (isNaN(deltaMs)) return;
 
@@ -280,7 +292,7 @@ function drawElapsedSince(isoDate) {
   deltaMs -= minutes * (1000 * 60);
   const seconds = Math.floor(deltaMs / 1000);
 
-  const txt = `${days} d ${hours} h ${minutes} m ${seconds} s`;
+  const txt = `${days.toLocaleString('es-ES')} d ${hours} h ${minutes} m ${seconds} s`;
 
   push();
   textAlign(LEFT, TOP);
@@ -349,3 +361,64 @@ function mousePressed() {
     cambiarModoColor();
   }
 }
+function modalSetup() {
+  const modal = document.getElementById("info-modal");
+  const infoButton = document.getElementById("info-button");
+  const closeButton = document.querySelector(".close-button");
+
+  infoButton.onclick = function() {
+    modal.style.display = "block";
+  };
+
+  closeButton.onclick = function() {
+    modal.style.display = "none";
+  };
+
+  window.onclick = function(event) {
+    if (event.target == modal) {
+      modal.style.display = "none";
+    }
+  };
+}
+
+function timeSliderSetup() {
+  const timeButton = document.getElementById('time-button');
+  const container = document.getElementById('time-slider-container');
+  const hourSlider = document.getElementById('hour-slider');
+  const minuteSlider = document.getElementById('minute-slider');
+  const hourDisplay = document.getElementById('hour-display');
+  const minuteDisplay = document.getElementById('minute-display');
+  const resetButton = document.getElementById('reset-time');
+
+  if (!timeButton || !container || !hourSlider || !minuteSlider) return;
+
+  timeButton.addEventListener('click', function() {
+    container.style.display = container.style.display === 'none' ? 'block' : 'none';
+  });
+
+  hourSlider.addEventListener('input', function(e) {
+    const hour = parseInt(e.target.value);
+    hourDisplay.textContent = hour.toString().padStart(2, '0');
+    manualHour = hour;
+  });
+
+  minuteSlider.addEventListener('input', function(e) {
+    const minute = parseInt(e.target.value);
+    minuteDisplay.textContent = minute.toString().padStart(2, '0');
+    manualMinute = minute;
+  });
+
+  resetButton.addEventListener('click', function() {
+    manualHour = null;
+    manualMinute = null;
+    hourSlider.value = new Date().getHours();
+    minuteSlider.value = new Date().getMinutes();
+    hourDisplay.textContent = new Date().getHours().toString().padStart(2, '0');
+    minuteDisplay.textContent = new Date().getMinutes().toString().padStart(2, '0');
+  });
+}
+
+window.addEventListener('load', () => {
+  modalSetup();
+  timeSliderSetup();
+});
