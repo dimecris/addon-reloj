@@ -87,7 +87,7 @@ async function setup() {
 
   // Leo el estado del modo oscuro desde localStorage
   try {
-    modoOscuro = getItem("modoOscuro");
+    modoOscuro = getItem("modoOscuro"); //GetItem recoge el valor guardado por storeItem
   } catch (e) {
     modoOscuro = null;
   }

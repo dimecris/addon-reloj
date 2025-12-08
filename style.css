@@ -27,8 +27,8 @@ html, body {
   position: relative;
   width: 300px;
   height: 150px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
   font-family: 'Barlow', sans-serif;
+  overflow: hidden;
 }
 b{
   font-family: 'Barlow Bold', sans-serif;
