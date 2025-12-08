@@ -20,7 +20,6 @@
 }
 
 html, body {
-  /* La altura total será 150px del canvas + la altura de los controles */
   margin: 0;
   padding: 0;
   background-color: var(--color-white);
