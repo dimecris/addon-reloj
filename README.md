@@ -121,6 +121,7 @@ Un botón "i" abre un modal con información contextual sobre la Declaración Ba
 ### Posibles mejoras
 - Utilizar una API de geolocalización del navegador y/o una librería tipo SunCal.js para modificar la hora de puesta de sol. Habría que investigar si el navegador nos permite saber la hora exacta de la puesta de sol.
 - Cambio automático de modo oscuro o claro según la hora actual.
+- Crear una mini ventana flotante para que no desaparezca de pantalla.
 ---
 
 
